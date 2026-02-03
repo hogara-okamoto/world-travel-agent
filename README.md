@@ -4,7 +4,7 @@ A professional Travel Agent agent that generates high-fidelity structured itiner
 
 Built for the **"Best Use of Opik"** Hackathon category.
 
-![Opik Dashboard](./images/screenshot.png)
+![Opik Dashboard](./images/screenshot.jpg)
 
 As shown in the graph for Hackathon_Travel_Dataset_V2, the agent's accuracy for custom metrics (JSON Correctness and Price Appropriateness) started at 0 due to parsing hallucinations and tool-dataset misalignment. By iteratively refining the system prompt and evaluation logic, I successfully brought the accuracy to a consistent 1.0.
 
