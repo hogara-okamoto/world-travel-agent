@@ -34,9 +34,9 @@ As shown in the graph for Hackathon_Travel_Dataset_V2, the agent's accuracy for 
 
 ## Evaluation Metrics
 
-    I developed a custom evaluation suite in evaluate.py:<br>
-        JSON_Correctness_and_Intent: Validates schema integrity and destination accuracy.<br>
-        Price_Appropriateness_Judge: Checks if the selected total cost matches the user's budget sensitivity (Low/Medium/High).<br>
+    I developed a custom evaluation suite in evaluate.py:
+        JSON_Correctness_and_Intent: Validates schema integrity and destination accuracy.
+        Price_Appropriateness_Judge: Checks if the selected total cost matches the user's budget sensitivity (Low/Medium/High).
         AnswerRelevance (Opik Native): Ensures the response directly addresses the user's query.
 
 ## 📂 Project Structure
