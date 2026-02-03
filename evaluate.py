@@ -1,27 +1,29 @@
 import json
 import os
+import re
 from dotenv import load_dotenv
 from opik import Opik
 from opik.evaluation import evaluate
 from opik.evaluation.metrics.score_result import ScoreResult
+from opik.evaluation.metrics import AnswerRelevance
 from main import run_agent
 
 load_dotenv()
 
-# 1. テストデータセット
+# 1. Test Dataset (English version)
 DATASET_ITEMS = [
     {
-        "input": "パリへ行きたい。安く済ませたい。",
+        "input": "I want to go to Paris. I want to keep it as cheap as possible.",
         "expected_destination": "Paris",
         "expected_price_sensitivity": "low"
     },
     {
-        "input": "ニューヨークへ豪華に行きたい。",
+        "input": "I'd like a luxurious trip to New York.",
         "expected_destination": "New York",
         "expected_price_sensitivity": "high"
     },
     {
-        "input": "東京からロンドンへの出張。予算は普通。",
+        "input": "Business trip from Tokyo to London. My budget is average.",
         "expected_destination": "London",
         "expected_price_sensitivity": "medium"
     },
@@ -38,16 +40,21 @@ class TravelJsonMetric:
     def score(self, output, expected_destination, **kwargs):
         try:
             # JSONパース処理
-            clean_output = output.replace("```json", "").replace("```", "").strip()
-            plan = json.loads(clean_output)
+            #【最強のパース】最初に出現する { から 最後に出現する } までを抜き出す
+            match = re.search(r'\{.*\}', output, re.DOTALL)
+            if not match:
+                return ScoreResult(name=self.name, value=0.0, reason="No JSON found in text")
             
+            json_str = match.group()
+            plan = json.loads(json_str) # ここでパースに成功する確率が激増します
+                
             score = 1.0
             reasons = []
 
             # チェック1: 目的地が合っているか？
             # 引数で受け取った expected_destination を直接使います
             dest_in_plan = plan.get("destination", "")
-            if expected_destination in dest_in_plan:
+            if expected_destination.lower() in dest_in_plan.lower():
                 reasons.append("Destination matches.")
             else:
                 score -= 0.5
@@ -78,6 +85,44 @@ class TravelJsonMetric:
                 value=0.0,
                 reason=f"Error: {str(e)}"
             )
+        
+# --- 新しいJudge: 価格妥当性評価器 ---
+class TravelJudgeMetric:
+    def __init__(self):
+        self.name = "Price_Appropriateness_Judge"
+
+    def score(self, output, expected_price_sensitivity, **kwargs):
+        """
+        別のLLMを使って、入力（安く済ませたい等）に対して
+        回答の価格設定が妥当かを人間のように判定させます。
+        """
+        # ここでは本来、Opikの `LLM-as-judge` 機能や OpenAI API を呼び出しますが
+        # 簡易的に「安い」という言葉と金額を照合するロジックをシミュレートします。
+        
+        try:
+        # 3. こちらも同様に正規表現で抽出
+            match = re.search(r'\{.*\}', output, re.DOTALL)
+            if not match:
+                return ScoreResult(name=self.name, value=0.0, reason="No JSON found")
+            
+            plan = json.loads(match.group())
+            cost = plan.get("total_cost", 0)
+            
+            score = 1.0
+            reason = "Price seems reasonable for the request."
+
+            if expected_price_sensitivity == "low":
+                return ScoreResult(value=1.0 if cost < 200000 else 0.2, name=self.name)
+                
+            elif expected_price_sensitivity == "medium":
+                return ScoreResult(value=1.0 if 100000 <= cost <= 400000 else 0.5, name=self.name)
+                
+            elif expected_price_sensitivity == "high":
+                return ScoreResult(value=1.0 if cost > 300000 else 0.2, name=self.name)
+
+            return ScoreResult(name=self.name, value=score, reason=reason)
+        except:
+            return ScoreResult(name=self.name, value=0.0, reason="Invalid output format")
 
 # 3. 評価タスク
 def eval_task(item):
@@ -91,7 +136,7 @@ if __name__ == "__main__":
     
     client = Opik()
     
-    dataset_name = "Hackathon_Travel_Dataset_Final"
+    dataset_name = "Hackathon_Travel_Dataset_V2"
     dataset = client.get_or_create_dataset(name=dataset_name)
     
     # データ挿入（エラー回避のtry-except付き）
@@ -105,6 +150,10 @@ if __name__ == "__main__":
     evaluate(
         dataset=dataset,
         task=eval_task,
-        scoring_metrics=[TravelJsonMetric()],
+        scoring_metrics=[
+            TravelJsonMetric(),       # 以前の形式チェック
+            TravelJudgeMetric(),      # 今回追加したカスタムJudge
+            AnswerRelevance(require_context=False)         # Opik標準のLLM-as-judge
+        ],
         experiment_name="TravelAgent_MVP_Experiment"
     )

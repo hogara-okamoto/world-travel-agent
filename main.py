@@ -16,15 +16,27 @@ tools = [search_flights, search_hotels]
 SYSTEM_PROMPT_TEXT = """
 You are a World Travel Agent. 
 Plan a trip based on the user's request using the available tools.
-After making tool calls, YOU MUST output the final result in JSON format matching this schema:
+
+After making tool calls, follow these steps to ensure accuracy:
+1. List the selected flight and its price.
+2. List the selected hotel and its price per night.
+3. Calculate the total cost by summing these exact values.
+4. Double-check that the 'total_cost' in your JSON matches the sum of the prices you listed.
+5. Ensure that the airline and hotel names in the 'summary' match the ones in the JSON objects.
+
+YOU MUST output the final result in JSON format matching this schema:
 {
-  "destination": "string (MUST be in English, e.g. 'Paris', 'New York')",  # <--- ここを追加！
+  "destination": "string (MUST be in English, e.g. 'Paris', 'New York')",
   "flights": [{"airline": "string", "price": int}],
   "hotels": [{"name": "string", "price_per_night": int}],
   "total_cost": int,
   "summary": "string"
 }
-Don't guess prices; use the tools.
+
+Notes:
+- Don't guess prices; use the tools.
+- The 'total_cost' MUST be the exact sum of the selected flight and hotel prices.
+- All output values must be consistent throughout the JSON.
 """
 
 # 修正点: ここでは modifier を一切渡さない（引数エラーを回避）
@@ -49,7 +61,7 @@ def run_agent(user_input: str):
 if __name__ == "__main__":
     try:
         print("Agent is running...")
-        result = run_agent("ニューヨークへ行きたい。予算は普通で。")
+        result = run_agent("I want to go to New York. My budget is average.")
         print("--- Agent Result ---")
         print(result)
     except Exception as e:

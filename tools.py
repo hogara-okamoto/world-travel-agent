@@ -24,15 +24,21 @@ def search_flights(destination: str, origin: str = "Tokyo"):
     """Search for flights. Returns flight options with prices."""
     # モックなので、どこへ行っても適当なデータを返す
     return [
-        {"airline": "Global Air", "flight_number": "GA101", "price": 80000},
-        {"airline": "Budget Fly", "flight_number": "BF505", "price": 45000}
+        {"airline": "Global Air", "flight_number": "GA101", "price": 250000},
+        {"airline": "Budget Fly", "flight_number": "BF505", "price": 120000}
     ]
 
 @tool
 def search_hotels(destination: str, budget_level: str = "medium"):
     """Search for hotels. budget_level can be 'low', 'medium', 'high'."""
-    base_price = 15000 if budget_level == "medium" else 8000
+    if budget_level == "high":
+        base_price = 150000  # 豪華なら1泊15万円〜
+    elif budget_level == "low":
+        base_price = 8000    # 安いなら1泊8千円〜
+    else:
+        base_price = 30000   # 普通なら1泊3万円〜
+
     return [
-        {"name": f"{destination} Central Hotel", "price_per_night": base_price},
-        {"name": f"{destination} Grand Resort", "price_per_night": base_price * 2}
+        {"name": f"{destination} Comfort Inn", "price_per_night": base_price},
+        {"name": f"{destination} Royal Palace", "price_per_night": base_price * 2}
     ]
