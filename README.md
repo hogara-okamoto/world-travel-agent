@@ -46,6 +46,7 @@ As shown in the graph for Hackathon_Travel_Dataset_V2, the agent's accuracy for 
 ├── tools.py      # Mock travel tools (Flights/Hotels)
 ├── evaluate.py   # Opik Evaluation Script (The Judge)
 └── images/       # Screenshots for README
+```
 
 ## How to Run
 
