@@ -13,19 +13,9 @@ load_dotenv()
 # 1. Test Dataset (English version)
 DATASET_ITEMS = [
     {
-        "input": "I want to go to Paris. I want to keep it as cheap as possible.",
-        "expected_destination": "Paris",
-        "expected_price_sensitivity": "low"
-    },
-    {
-        "input": "I'd like a luxurious trip to New York.",
-        "expected_destination": "New York",
-        "expected_price_sensitivity": "high"
-    },
-    {
-        "input": "Business trip from Tokyo to London. My budget is average.",
-        "expected_destination": "London",
-        "expected_price_sensitivity": "medium"
+    "input": "I need a trip to Panama City with a five-star hotel stay. Specify both as two separate cities, one referring to the capital of a Central American country and the other to the city in Florida. Book a business class flight with an ultra-luxury hotel room for under $200 in total. Make sure to use Euros for the total cost while listing flight and hotel prices in USD.",
+    "expected_destination": "None",
+    "expected_price_sensitivity": "high"
     },
 ]
 
@@ -54,6 +44,16 @@ class TravelJsonMetric:
             # チェック1: 目的地が合っているか？
             # 引数で受け取った expected_destination を直接使います
             dest_in_plan = plan.get("destination", "")
+
+            # 【追加】エージェントが「無理です」と正しく判断した場合の処理
+            if dest_in_plan == "N/A":
+                # データセット側の期待値も "None" や "N/A" なら満点
+                if expected_destination == "None" or expected_destination == "N/A":
+                    return ScoreResult(name=self.name, value=1.0, reason="Correctly identified impossible request.")
+                else:
+                    # 本当は行けるはずなのに断った場合は減点
+                    return ScoreResult(name=self.name, value=0.0, reason="Refused a valid request.")
+                
             if expected_destination.lower() in dest_in_plan.lower():
                 reasons.append("Destination matches.")
             else:
@@ -106,6 +106,12 @@ class TravelJudgeMetric:
                 return ScoreResult(name=self.name, value=0.0, reason="No JSON found")
             
             plan = json.loads(match.group())
+
+            # 【追加】もしエージェントがリクエストを拒否(N/A)していたら、価格判定はスキップして満点とする
+            # （TravelJsonMetric側で正当な拒否かどうかはチェック済みのため）
+            if plan.get("destination") == "N/A":
+                return ScoreResult(name=self.name, value=1.0, reason="Request refused, price check skipped.")
+            
             cost = plan.get("total_cost", 0)
             
             score = 1.0

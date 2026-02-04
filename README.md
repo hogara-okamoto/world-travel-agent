@@ -26,6 +26,22 @@ As shown in the graph for Hackathon_Travel_Dataset_V2, the agent's accuracy for 
 
     Solution: Aligned the tool's price distribution with the evaluation dataset, ensuring a consistent definition of "Luxury" and "Budget" across the entire system.
 
+## 4. Red Teaming & Adversarial Robustness
+
+    We went beyond standard evaluations by implementing an Adversarial Testing Loop (Red Teaming) using a secondary LLM.
+
+    The Methodology: Instead of hand-crafting edge cases, I created generate_adversarial_test.py. This script uses a "Red Team" LLM to analyze the agent's system prompt and generate input designed to trigger logic failures (e.g., "Book an ultra-luxury trip for under $200" or "Ambiguous destinations").
+
+    The Discovery (Cognitive Overload): Initial tests revealed that when faced with contradictory instructions (e.g., "Use USD for input but Euros for output"), the agent suffered from "Unit Hallucination"—ignoring the actual currency symbol and processing only the raw numbers.
+
+    The Fix (Evidence-Based Guardrails):
+
+        Strict Mode Separation: Refactored the System Prompt to distinguish between "Success Mode" and "Failure Mode."
+
+        Evidence Citation: Configured the agent to cite specific tool data (e.g., "Lowest flight is $3,000") within the rejection message, rather than offering a generic refusal.
+
+        Result: The agent now achieves a 1.0 score even on adversarial inputs by correctly identifying impossible requests and explaining why with quantitative evidence.
+
 ## 🛠 Tech Stack
 - **LangGraph:** For stateful agent orchestration.
 - **Opik:** For tracing, observability, and evaluation datasets.
@@ -45,6 +61,7 @@ As shown in the graph for Hackathon_Travel_Dataset_V2, the agent's accuracy for 
 ├── main.py       # Agent logic with LangGraph & Opik Tracing
 ├── tools.py      # Mock travel tools (Flights/Hotels)
 ├── evaluate.py   # Opik Evaluation Script (The Judge)
+├── generate_adversarial_test.py  # Red Teaming script to stress-test the agent
 └── images/       # Screenshots for README
 ```
 

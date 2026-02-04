@@ -19,10 +19,19 @@ class Itinerary(BaseModel):
     summary: str = Field(description="旅程の魅力的な要約")
 
 # 2. モックツール群（世界対応）
+VALID_CITIES = ["London", "Paris", "New York", "Tokyo"] # Tokyoも例として追加
+
 @tool
 def search_flights(destination: str, origin: str = "Tokyo"):
     """Search for flights. Returns flight options with prices."""
-    # モックなので、どこへ行っても適当なデータを返す
+    # 入力の正規化（大文字小文字の揺れ吸収）
+    dest_normalized = destination.title()
+
+    if dest_normalized not in VALID_CITIES:
+        # 【ここが重要】: エラーメッセージ自体を「証拠」として使えるように詳細化する
+        return (f"Error: No flights found for '{destination}'. "
+                f"Currently, we only support flights to: {', '.join(VALID_CITIES)}.")
+    
     return [
         {"airline": "Global Air", "flight_number": "GA101", "price": 250000},
         {"airline": "Budget Fly", "flight_number": "BF505", "price": 120000}
@@ -31,6 +40,14 @@ def search_flights(destination: str, origin: str = "Tokyo"):
 @tool
 def search_hotels(destination: str, budget_level: str = "medium"):
     """Search for hotels. budget_level can be 'low', 'medium', 'high'."""
+    # 入力の正規化（大文字小文字の揺れ吸収）
+    dest_normalized = destination.title()
+
+    # フライトと同じロジックでガード
+    if dest_normalized not in VALID_CITIES:
+        return (f"Error: No hotels found in '{destination}'. "
+                f"Currently, we only support hotels in: {', '.join(VALID_CITIES)}.")
+    
     if budget_level == "high":
         base_price = 150000  # 豪華なら1泊15万円〜
     elif budget_level == "low":
