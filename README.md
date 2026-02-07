@@ -1,6 +1,6 @@
 # ✈️ World Travel Agent MVP (Powered by LangGraph & Opik)
 
-A professional Travel Agent agent that generates high-fidelity structured itineraries. This project demonstrates a complete LLM Ops lifecycle: from identifying hallucinations and parsing errors to achieving a perfect 1.0 evaluation score.
+A MVP Travel Agent that generates high-fidelity structured itineraries. This project demonstrates a complete LLM Ops lifecycle: from identifying hallucinations and parsing errors to achieving a perfect 1.0 evaluation score.
 
 Built for the **"Best Use of Opik"** Hackathon category.
 
@@ -78,5 +78,8 @@ As shown in the graph for Hackathon_Travel_Dataset_V2, the agent's accuracy for 
 ### Run the Agent
     python main.py
 
-### Run Evaluation (The Magic)
+### Run Evaluation
     python evaluate.py
+
+### Run Red Teaming (Adversarial Stress Test)
+    python generate_adversarial_test.py
