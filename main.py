@@ -12,7 +12,7 @@ load_dotenv()
 llm = ChatOpenAI(model="gpt-4o")
 tools = [search_flights, search_hotels]
 
-# システムプロンプト（JSON出力を指示）
+# System prompt (Instructing JSON output)
 SYSTEM_PROMPT_TEXT = """
 You are a World Travel Agent. 
 Plan a trip based on the user's request using the available tools.
@@ -57,13 +57,12 @@ If the budget is too low OR **the destination is not supported**, output a JSON 
 }
 """
 
-# 修正点: ここでは modifier を一切渡さない（引数エラーを回避）
+# No modifiers passed here (to avoid argument errors)
 graph = create_react_agent(llm, tools)
 
 @track(name="TravelAgent_Run")
 def run_agent(user_input: str):
-    # 修正点: ここで手動でシステムプロンプトを先頭に追加する
-    # これならどんなバージョンのライブラリでも動きます
+    # Manually prepend the system prompt to the messages here
     messages = [
         SystemMessage(content=SYSTEM_PROMPT_TEXT),
         HumanMessage(content=user_input)
@@ -73,7 +72,7 @@ def run_agent(user_input: str):
     opik_tracer = OpikTracer()
     result = graph.invoke(inputs, config={"callbacks": [opik_tracer]})
     
-    # AIの最後の回答を取得
+    # Retrieve the final response from the AI
     return result["messages"][-1].content
 
 if __name__ == "__main__":

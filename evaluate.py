@@ -19,39 +19,38 @@ DATASET_ITEMS = [
     },
 ]
 
-# 2. カスタム評価指標 (Metric)
+# 2. Custom Evaluation Metric
 class TravelJsonMetric:
     def __init__(self):
         self.name = "JSON_Correctness_and_Intent"
 
-    # 【修正ポイント】
-    # 引数名を 'input_data' から 'expected_destination' に変更しました。
-    # Opikはデータセット内の同名のキーを自動的にここに渡してくれます。
+    # Changed the argument name to 'expected_destination'
+    # Opik automatically passes keys with the same name from the dataset.
     def score(self, output, expected_destination, **kwargs):
         try:
-            # JSONパース処理
-            #【最強のパース】最初に出現する { から 最後に出現する } までを抜き出す
+            # JSON parsing process
+            # [Robust Parsing]: Extract everything between the first '{' and the last '}'
             match = re.search(r'\{.*\}', output, re.DOTALL)
             if not match:
                 return ScoreResult(name=self.name, value=0.0, reason="No JSON found in text")
             
             json_str = match.group()
-            plan = json.loads(json_str) # ここでパースに成功する確率が激増します
+            plan = json.loads(json_str) # Significantly increases the success rate of JSON parsing here
                 
             score = 1.0
             reasons = []
 
-            # チェック1: 目的地が合っているか？
-            # 引数で受け取った expected_destination を直接使います
+            # Check 1: Does the destination match?
+            # Use the 'expected_destination' argument directly
             dest_in_plan = plan.get("destination", "")
 
-            # 【追加】エージェントが「無理です」と正しく判断した場合の処理
+            # [NEW]: Logic for when the agent correctly identifies the request as "Impossible"
             if dest_in_plan == "N/A":
-                # データセット側の期待値も "None" や "N/A" なら満点
+                # Full marks if the dataset expectation is also "None" or "N/A"
                 if expected_destination == "None" or expected_destination == "N/A":
                     return ScoreResult(name=self.name, value=1.0, reason="Correctly identified impossible request.")
                 else:
-                    # 本当は行けるはずなのに断った場合は減点
+                    # Penalty if the agent refuses a valid request
                     return ScoreResult(name=self.name, value=0.0, reason="Refused a valid request.")
                 
             if expected_destination.lower() in dest_in_plan.lower():
@@ -60,7 +59,7 @@ class TravelJsonMetric:
                 score -= 0.5
                 reasons.append(f"Wrong destination: {dest_in_plan} (Expected: {expected_destination})")
 
-            # チェック2: 必須項目(total_cost)があるか？
+            # Check 2: Is the mandatory field 'total_cost' present?
             if "total_cost" in plan and isinstance(plan["total_cost"], int):
                 reasons.append("Total cost is valid.")
             else:
@@ -86,29 +85,28 @@ class TravelJsonMetric:
                 reason=f"Error: {str(e)}"
             )
         
-# --- 新しいJudge: 価格妥当性評価器 ---
+# New Judge: Price Appropriateness Evaluator
 class TravelJudgeMetric:
     def __init__(self):
         self.name = "Price_Appropriateness_Judge"
 
     def score(self, output, expected_price_sensitivity, **kwargs):
         """
-        別のLLMを使って、入力（安く済ませたい等）に対して
-        回答の価格設定が妥当かを人間のように判定させます。
+        Uses another LLM-as-judge logic to determine if the pricing is reasonable for the user request.
         """
-        # ここでは本来、Opikの `LLM-as-judge` 機能や OpenAI API を呼び出しますが
-        # 簡易的に「安い」という言葉と金額を照合するロジックをシミュレートします。
+        # (Here, we would normally call Opik's `LLM-as-judge` function or the OpenAI API.)
+        # Simulating logic by matching specific price thresholds with sensitivity levels.
         
         try:
-        # 3. こちらも同様に正規表現で抽出
+        # Extract using regex in the same manner
             match = re.search(r'\{.*\}', output, re.DOTALL)
             if not match:
                 return ScoreResult(name=self.name, value=0.0, reason="No JSON found")
             
             plan = json.loads(match.group())
 
-            # 【追加】もしエージェントがリクエストを拒否(N/A)していたら、価格判定はスキップして満点とする
-            # （TravelJsonMetric側で正当な拒否かどうかはチェック済みのため）
+            # If the request was refused (N/A), skip the price check and grant full marks.
+            #（Because TravelJsonMetric has already checked whether the refusal was legitimate）
             if plan.get("destination") == "N/A":
                 return ScoreResult(name=self.name, value=1.0, reason="Request refused, price check skipped.")
             
@@ -130,7 +128,7 @@ class TravelJudgeMetric:
         except:
             return ScoreResult(name=self.name, value=0.0, reason="Invalid output format")
 
-# 3. 評価タスク
+# 3. Evaluation Task
 def eval_task(item):
     res = run_agent(item["input"])
     return {
@@ -145,21 +143,21 @@ if __name__ == "__main__":
     dataset_name = "Hackathon_Travel_Dataset_V2"
     dataset = client.get_or_create_dataset(name=dataset_name)
     
-    # データ挿入（エラー回避のtry-except付き）
+    # Data insertion (with try-except to handle potential errors)
     try:
         dataset.insert(DATASET_ITEMS)
         print(f"✅ Data inserted into {dataset_name}")
     except Exception as e:
         print(f"ℹ️ Data insertion skipped (might already exist).")
 
-    # 評価実行
+    # Execute Evaluation
     evaluate(
         dataset=dataset,
         task=eval_task,
         scoring_metrics=[
-            TravelJsonMetric(),       # 以前の形式チェック
-            TravelJudgeMetric(),      # 今回追加したカスタムJudge
-            AnswerRelevance(require_context=False)         # Opik標準のLLM-as-judge
+            TravelJsonMetric(),       # Format Check
+            TravelJudgeMetric(),      # Custom Judge
+            AnswerRelevance(require_context=False)         # Opik's `LLM-as-judge`
         ],
         experiment_name="TravelAgent_MVP_Experiment"
     )
